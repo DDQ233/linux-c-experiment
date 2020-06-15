@@ -1,0 +1,10 @@
+CC=gcc
+CFLAGS=
+OBJS=hello2_1.o
+all:hello2_1
+hello2_1:hello2_1.o
+	$(CC) $(CFLAGS) $^ -o $@
+hello2_1.o:hello2_1.c
+	$(CC) $(CFLAGS) -c $< -o $@
+clean:
+	rm -rf hello2_1 *.o

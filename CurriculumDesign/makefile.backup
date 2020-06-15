@@ -1,0 +1,49 @@
+# 将当前目录下的C源文件全部获取
+SRCS = $(wildcard *.c)
+
+# 获取C源文件形成的.o文件
+OBJECTS = $(patsubst %.c,%.o,$(SRCS))
+
+# 工具类静态库目标文件
+TEST_SRC = mysqlUtilTest.o
+TEST_OBJS = mysqlUtilTest
+
+UTIL_OBJS = util
+MYSQL_UTIL_OBJS = mysqlutil.c
+MYSQL_UTIL_OUTPUT = mysqlutil.o
+MYSQL_UTIL_LIB = libmysqlutil.a
+
+# 工程名
+DEST = mysqlUtilTest
+
+# 编译器
+CC = gcc
+
+# 链接库
+MYSQL_LIB += -L/usr/lib64/mysql
+MYSQL_LIB += -lmysqlutil
+
+MYLIBS += -L/usr/lib64/mysql
+MYLIBS += -L.
+MYLIBS += -lmysqlclient
+MYLIBS += -lmysqlutil
+
+# 头文件搜索路径
+MYSQL_INCLUDE_PATH = -I/usr/include/mysql
+
+MYINCLUDEPATH = -I/usr/include/mysql
+
+# 源文件编译
+$(DEST) : $(OBJECTS)
+	$(CC) -o $@ $^ $(MYLIBS)
+%.o : %.c      # “%”是一个Makefile的通配符，它代表任意的字符串
+	$(CC) -c -o $@ $^ $(MYINCLUDEPATH)
+
+# 工具类编译
+$(UTIL_OBJS) :
+	$(CC) -c -o $@ $^ $(MYSQL_INCLUDE_PATH) $(MYSQL_LIB)
+	ar rcs $(MYSQL_UTIL_LIB) $(MYSQL_UTIL_OUTPUT)
+
+.PHONY : clean
+clean:
+	rm -f *.o $(DEST) *~

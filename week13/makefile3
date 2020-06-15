@@ -1,0 +1,12 @@
+CC=gcc
+CFLAGS=
+OBJS=hello3_1.o hello3_2.o
+all:hello
+hello:hello3_1.o hello3_2.o
+	$(CC) $(CFLAGS) $^ -o $@
+hello3_1.o:hello3_1.c
+	$(CC) $(CFLAGS) -c $< -o $@
+hello3_2.o:hello3_2.c
+	$(CC) $(CFLAGS) -c $< -o $@
+clean:
+	rm hello *.o

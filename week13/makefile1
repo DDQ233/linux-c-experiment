@@ -1,0 +1,9 @@
+CC=gcc
+CFLAGS=
+all:hello1_1
+hello1_1:hello1_1.o
+	$(CC) $(CFLAGS) hello1_1.o -o hello1_1
+hello1_1.o:hello1_1.c
+	$(CC) $(CFLAGS) -c hello1_1.c -o hello1_1.o
+clean:
+	rm -rf hello1_1 *.o
