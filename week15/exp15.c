@@ -38,6 +38,7 @@ int main()
     conn_opt.username = USERNAME;
     conn_opt.password = PASSWORD;
     conn_opt.onFailure = onDisconnect;
+    conn_opt.automaticReconnect = 1;
     ret = MQTTAsync_connect(client, &conn_opt);
     if (ret != MQTTASYNC_SUCCESS) {
         printf("> x Cannot start a connection to mqtt server.\n");
@@ -48,7 +49,7 @@ int main()
     while(1) {
         if(isConnect == 1) {
             MQTTAsync_message message = MQTTAsync_message_initializer;
-            MQTTAsync_responseOptions
+            MQTTAsync_responseOptions resp_opt = MQTTAsync_responseOptions_initializer;
             char buffer[100];
             static int count = 1;
             sprintf(buffer, "number = %d", count++);
@@ -56,7 +57,7 @@ int main()
             message.payloadlen = strlen(buffer);
             message.qos = 1;
             printf("> Sending message.......\n");
-            ret = MQTTAsync_sendMessage(client, "Message", &message, NULL);
+            ret = MQTTAsync_sendMessage(client, "Message", &message, &resp_opt);
             if (ret != MQTTASYNC_SUCCESS) {
                 printf("> x Parameters error.\n");
             }
