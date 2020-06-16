@@ -9,6 +9,20 @@
 #define USERNAME "admin"
 #define PASSWORD "admin"
 
+void onConnect(void* context, MQTTAsync_successData* response)
+{
+    int ret;
+    MQTTAsync client = (MQTTAsync) context;
+    MQTTAsync_responseOptions resp_opt = MQTTAsync_responseOptions_initializer;
+    printf("> O Connected with mqtt server.\n");
+    resp_opt.onSuccess = onSubscribe;
+    ret = MQTTAsync_subcribe(client, "Message", 1, &response);
+    if (ret != MQTTASYNC_SUCCESS) {
+        printf("> x Parameters error.\n");
+    }
+    isConnect = 1;
+}
+
 void onDisconnect(void* context, MQTTAsync_failureData* response)
 {
     printf("> x Cannot mqtt server.\n");
@@ -17,6 +31,12 @@ void onDisconnect(void* context, MQTTAsync_failureData* response)
 
 void onSend(void* context, MQTTAsync_successData* data)
 {
+    printf("> O Send successfully.\n");
+}
+
+void onMessageArrived(void* context, char* topicName, int topicLen, MQTTAsync_message* message)
+{
+
 
 }
 
@@ -34,11 +54,13 @@ int main()
         printf("> x Error : %d.\n", ret);
         return -1;
     }
+    ret = MQTTAsync_setCallbacks(client, NULL, NULL, onMessageArrived, NULL);
 
     conn_opt.username = USERNAME;
     conn_opt.password = PASSWORD;
     conn_opt.onFailure = onDisconnect;
     conn_opt.automaticReconnect = 1;
+    conn_opt.context=client;
     ret = MQTTAsync_connect(client, &conn_opt);
     if (ret != MQTTASYNC_SUCCESS) {
         printf("> x Cannot start a connection to mqtt server.\n");
