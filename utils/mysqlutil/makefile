@@ -19,4 +19,4 @@ $(DEST):$(OBJECTS)
 .PHONY:clean
 
 clean:
-	rm -f *.o $(DEST) *~
+	rm -f *.a *.o $(DEST) *~

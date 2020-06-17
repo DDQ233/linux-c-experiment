@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 #include <MQTTAsync.h>
 #include "mqttutil.h"
 
@@ -80,15 +81,33 @@ int main()
     resp_opts = bindResponseOptions(onSend, onSendFailure);
 
     // Bind disconnect options
-    disc_opts = bindResponseOptions(onDisconnect, onDisconnectFailure);
+    disc_opts = bindDisconnectOptions(onDisconnect, onDisconnectFailure);
 
     // Create mqtt client handle.
     mqttClient = createClient(SERVER_ADDRESS, CLIENT_ID);
 
     // Set callback function.
-    mqttClient = setCallback(client, connlost, messageArrived);
-
-
+    mqttClient = setCallbacks(mqttClient, connlost, messageArrived, NULL);
 
     // Connect mqtt server
+    mqttClient = connectMqttServer(mqttClient, conn_opts);
+
+    while(1) {
+        MQTTAsync_message message = MQTTAsync_message_initializer;
+        char buffer[100];
+        sprintf(buffer, "{T:233,H:233}");
+        message.payload = buffer;
+        message.payloadlen = (int)strlen(buffer);
+        message.qos = QOS;
+        printf("> Sending message.......\n");
+        if ((ret = MQTTAsync_sendMessage(mqttClient, "/sensor/dht11", &message, NULL)) != MQTTASYNC_SUCCESS) {
+            printf("> x Parameters error.\n");
+        } else {
+            printf("> Send successfully.\n");
+        }
+        sleep(2);
+    }
+
+    MQTTAsync_destroy(&mqttClient);
+
 }

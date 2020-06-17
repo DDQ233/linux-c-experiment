@@ -12,7 +12,7 @@ MQTTAsync_connectOptions bindConnectOptions(
     int isCleansession, 
     int isAutomaticReconnect, 
     MQTTAsync_onSuccess* onSuccess, 
-    MQTTAsync_onFailure* onFailure);
+    MQTTAsync_onFailure* onFailure)
 {
     MQTTAsync_connectOptions conn_opts = MQTTAsync_connectOptions_initializer;
     
@@ -41,7 +41,7 @@ MQTTAsync_responseOptions bindResponseOptions(
 }
 
 // Bind disconnect options
-MQTTAsync_disconnectOptions bindResponseOptions(
+MQTTAsync_disconnectOptions bindDisconnectOptions(
     MQTTAsync_onSuccess* onSuccess, 
     MQTTAsync_onFailure* onFailure)
 {
@@ -53,14 +53,15 @@ MQTTAsync_disconnectOptions bindResponseOptions(
     return disc_opts;
 }
 
+// Create mqtt client handle.
 MQTTAsync createClient(char* address, char* clientId)
 {
     MQTTAsync mqttClient;
     int ret;
 
-    if ((ret = MQTTAsync_create(&client, address, clientId, MQTTCLIENT_PERSISTENCE_NONE, NULL)) != MQTTASYNC_SUCCESS) {
+    if ((ret = MQTTAsync_create(&mqttClient, address, clientId, MQTTCLIENT_PERSISTENCE_NONE, NULL)) != MQTTASYNC_SUCCESS) {
         printf("> x Cannot create mqtt-async client.\n");
-        printf("> x Error : %d.\n", ret);
+        printf("> x Error code : %d.\n", ret);
     } else {
         printf("> O Create mqtt-async client handle successfully.\n");
     }
@@ -68,4 +69,37 @@ MQTTAsync createClient(char* address, char* clientId)
     return mqttClient;
 }
 
-MQTTAsync setCallbacks(MQTTAsync client, )
+// Set callback function.
+MQTTAsync setCallbacks(
+    MQTTAsync client, 
+    MQTTAsync_connectionLost* connlost, 
+    MQTTAsync_messageArrived* messageArrived, 
+    MQTTAsync_deliveryComplete* deliveryComplete)
+{
+    MQTTAsync mqttClient = client;
+    int ret;
+    if ((ret = MQTTAsync_setCallbacks(client, client, connlost, messageArrived, NULL)) != MQTTASYNC_SUCCESS)
+	{
+        printf("> x Cannot set callbacks function.\n");
+        printf("> x Error code : %d.\n", ret);
+	} else {
+        printf("> O Set callbacks function successfully.\n");
+    }
+    return client;
+}
+
+// Connect mqtt server
+MQTTAsync connectMqttServer(MQTTAsync client, MQTTAsync_connectOptions conn_opts)
+{
+    MQTTAsync mqttClient = client;
+    int ret;
+    if ((ret = MQTTAsync_connect(client, &conn_opts)) != MQTTASYNC_SUCCESS) {
+        printf("> x Cannot connect mqtt server.\n");
+        printf("> x Error code : %d.\n", ret);
+    } else {
+        printf("> O Connect mqtt server successfully.\n");
+    }
+    return mqttClient;
+}
+
+
