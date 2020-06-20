@@ -3,15 +3,15 @@
 #include <MQTTAsync.h>
 #include <string.h>
 
-#define SERVER_IP "111.229.163.109"
+#define SERVER_IP "tcp://111.229.163.109:1990"
 #define PORT 1990
 #define CLIENT_ID "1740707152"
 #define USERNAME "admin"
 #define PASSWORD "admin"
+#define QOS 1
+#define TOPIC "/sensor/dht11"
 
 int isConnect = 0;
-
-
 
 void onDisconnect(void* context, MQTTAsync_failureData* response)
 {
@@ -54,7 +54,7 @@ int main()
 {
     int ret;
     MQTTAsync client;
-    MQTTAsync_connectOptions conn_opt;
+    MQTTAsync_connectOptions conn_opt = MQTTAsync_connectOptions_initializer;
 
     // Initialize mqtt client handle
     ret = MQTTAsync_create(&client, SERVER_IP, CLIENT_ID, MQTTCLIENT_PERSISTENCE_NONE, NULL);
@@ -84,10 +84,12 @@ int main()
         return -1;
     }
 
+    isConnect = 1;
+
     while(1) {
         if(isConnect == 1) {
             MQTTAsync_message message = MQTTAsync_message_initializer;
-            MQTTAsync_responseOptions resp_opt = MQTTAsync_responseOptions_initializer;
+            // MQTTAsync_responseOptions resp_opt = MQTTAsync_responseOptions_initializer;
             char buffer[100];
             static int count = 1;
             sprintf(buffer, "number = %d", count++);
@@ -95,7 +97,7 @@ int main()
             message.payloadlen = strlen(buffer);
             message.qos = 1;
             printf("> Sending message.......\n");
-            ret = MQTTAsync_sendMessage(client, "Message", &message, NULL);
+            ret = MQTTAsync_sendMessage(client, TOPIC, &message, NULL);
             if (ret != MQTTASYNC_SUCCESS) {
                 printf("> x Parameters error.\n");
             }
