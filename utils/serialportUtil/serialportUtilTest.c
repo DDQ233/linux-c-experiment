@@ -13,7 +13,13 @@ int main()
 	char receiveBuffer[128];
 
     uartFd = UartOpen("/dev/ttyS0");
-    uartFd = UartBindOptions(uartFd, 115200, 0, 8, 1, 'N');
+    uartFd = UartBindOptions(
+        uartFd, 
+        115200, 
+        0, 
+        8, 
+        1, 
+        'N');
     
     while(1) {
         /*

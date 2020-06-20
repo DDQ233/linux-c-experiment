@@ -25,11 +25,17 @@ int UartOpen(char* srialPort)
 	return fd;
 }
 
-int UartBindOptions(int fd, int baudrate, int flowCtrl, int databits, int stopbits, int parity)
+int UartBindOptions(
+	int fd, 
+	int baudrate, 
+	int flowCtrl, 
+	int databits, 
+	int stopbits, 
+	int parity)
 {
 	int i = 0;
 	int speed_arr[] = { B115200, B57600, B19200, B9600, B4800, B2400 };
-	int name_arr[] = { 112500, 57600, 19200, 9600, 4800, 2400};
+	int name_arr[] = { 115200, 57600, 19200, 9600, 4800, 2400};
 	struct termios uart_cfg;
 
 	// Set uart type as original pattern
