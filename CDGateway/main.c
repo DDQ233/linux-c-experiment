@@ -4,12 +4,14 @@
 #include <strings.h>
 #include <unistd.h>
 #include <termios.h>
-#include <fcnlt.h>
+#include <fcntl.h>
 #include <pthread.h>
+#include <time.h>
+#include <MQTTAsync.h>
 #include <mysql/mysql.h>
 #include "mysqlutil.h"
 #include "mqttutil.h"
-#include "serialport.h"
+#include "serialportutil.h"
 
 #define MYSQL_REMOTE_SERVER_ADDRESS "111.229.163.109"
 #define MYSQL_REMOTE_SERVER_USERNAME "ddq"
@@ -46,9 +48,9 @@
 #define UART_NUM 5
 // #define UART_FD_PREFIX "/dev/ttyS"
 
-static unsigned int isMysqlConnect 0;
-static unsigned int isMqttConnect 0;
-static unsigned int isAllSerialportConnect 0;
+static unsigned int isMysqlConnect = 0;
+static unsigned int isMqttConnect = 0;
+static unsigned int isAllSerialportConnect = 0;
 static int uartFdPool[UART_NUM];
 static pthread_t serialportThreadPool[UART_NUM];
 static char* serialportList[UART_NUM];
@@ -63,9 +65,9 @@ void *serialportThread(void *arg)
     int uartNum = (int)arg;
     int count = 0;
     while(1) {
-        count = read(uartFdPool[uartNum], buffer, 128);
+        count = read(uartFdPool[uartNum], receiveBuffer, 128);
         if (count > 0) {
-            printf("UART : %d > %s", i, receiveBuffer);
+            printf("UART : %d > %s", uartNum, receiveBuffer);
 
             /*
              * Do something 
@@ -93,10 +95,11 @@ void openSerialportList()
 // Second run
 void initSerialportList()
 {
+    int i;
     int uartFd;
     printf("> O Initializing serial port list.\n");
     for (i = 0; i < UART_NUM; i++) {
-        uartFdPool[i] = UARTOpen(serialportList[uartNum]);
+        uartFdPool[i] = UartOpen(serialportList[uartNum]);
         uartFdPool[i] = UartBindOptions(
             uartFdPool[i], 
             SERIALPORT_BAUDRATE, 
@@ -119,7 +122,7 @@ void startSerialportThread()
         if (uartFdPool[i] < 0) {
             printf("> x Failed to create number of %d pthread.\n", i);
         } else {
-            printf("> O Number of %d thread was created.\n");
+            printf("> O Number of %d thread was created.\n", i);
         }
     }
     printf("> O Successfully.\n\n");
@@ -129,11 +132,13 @@ int main()
 {
     openSerialportList();
     initSerialportList();
-    
+
 
 
 
 
 
     startSerialportThread();
+
+    return 0;
 }

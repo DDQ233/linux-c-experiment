@@ -19,7 +19,7 @@ MYSQL connectMysql(char *addr, char *username, char *pwd, char *database);
 // Free result set
 void freeResult(MYSQL_RES *pRes);
 // Close resources
-void close(MYSQL *com_mysql);
+// void close(MYSQL *com_mysql);
 
 // Query
 MYSQL_RES* query(MYSQL com_mysql, char *sql);
