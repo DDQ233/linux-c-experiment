@@ -45,20 +45,20 @@
 #define TWO_SECOND 2
 #define FIVE_SECOND 5
 
-#define UART_NUM 5
+#define DEVICE_NUM 5
 // #define UART_FD_PREFIX "/dev/ttyS"
 
 static unsigned int isMysqlConnect = 0;
 static unsigned int isMqttConnect = 0;
 static unsigned int isAllSerialportConnect = 0;
-static int uartFdPool[UART_NUM];
-static pthread_t serialportThreadPool[UART_NUM];
+static int uartFdPool[DEVICE_NUM];
+static pthread_t serialportThreadPool[DEVICE_NUM];
 static MYSQL mysqlClient;
 static MYSQL_RES *pRes;
-static MQTTAsync mqttClient;
+static MQTTAsync mqttClientList[DEVICE_NUM];
 // static char* pSerialport;
-// static char serialportList[UART_NUM][15];
-// static char* serialport[UART_NUM];
+// static char serialportList[DEVICE_NUM][15];
+// static char* serialport[DEVICE_NUM];
 // static MYSQL mysqlClient;
 // static MQTTAsync mqttclient;
 
@@ -145,7 +145,8 @@ void *serialportThread(void *arg)
         count = read(uartFdPool[uartNum], receiveBuffer, 128);
         if (count > 0) {
             printf("UART : %d > %s", uartNum, receiveBuffer);
-
+            // Send message to mqtt server
+            
             /*
              * Do something 
              */
@@ -160,7 +161,7 @@ void *serialportThread(void *arg)
 // {
 //     int i = 0;
 //     printf("> O Opening serial port list.\n");
-//     for (i = 0; i < UART_NUM; i++) {
+//     for (i = 0; i < DEVICE_NUM; i++) {
 //         char temp[15];
 //         sprintf(temp, "/dev/ttyS%d", i);
 //         serialportList[i] = temp;
@@ -175,7 +176,7 @@ void initSerialportList()
     int i = 0;
     int uartFd;
     printf("> O Initializing serial port list.\n");
-    for (i = 0; i < UART_NUM; i++) {
+    for (i = 0; i < DEVICE_NUM; i++) {
         char serialport[15];
         sprintf(serialport, "/dev/ttyS%d", i);
         uartFdPool[i] = UartOpen(serialport);
@@ -200,7 +201,7 @@ void startSerialportThread()
     printf("> O Starting serial port thread.\n");
     int i = 0;
     int ret;
-    for (i = 0; i < UART_NUM; i++) {
+    for (i = 0; i < DEVICE_NUM; i++) {
         uartFdPool[i] = pthread_create(&serialportThreadPool[i], NULL, serialportThread, (void*)&i);
         if (uartFdPool[i] < 0) {
             printf("> x Failed to create number of %d pthread.\n", i);
@@ -216,7 +217,7 @@ void closeSerialportThread()
     printf("> O Closing serial port thread.\n");
     int i = 0;
     int ret;
-    for (i = 0; i < UART_NUM; i++) {
+    for (i = 0; i < DEVICE_NUM; i++) {
         // ret = pthread_join(serialportThreadPool[i], NULL);
         // if (ret < 0) {
         //     printf("> x Failed to join number of %d pthread.\n", i);
@@ -247,6 +248,7 @@ void startMySqlService()
 void startMqttService()
 {
     printf("> O Starting mqtt service.\n");
+    int i = 0;
     MQTTAsync_connectOptions conn_opts;
     MQTTAsync_responseOptions resp_opts;
     MQTTAsync_disconnectOptions disc_opts;
@@ -260,9 +262,12 @@ void startMqttService()
         onConnectFailure);
     resp_opts = bindResponseOptions(onSend, onSendFailure);
     disc_opts = bindDisconnectOptions(onDisconnect, onDisconnectFailure);
-    mqttClient = createClient(MQTT_SERVER_ADDRESS, MQTT_CLIENT_ID);
-    mqttClient = setCallbacks(mqttClient, connlost, messageArrived, NULL);
-    mqttClient = connectMqttServer(mqttClient, conn_opts);
+    for (i = 0; i < DEVICE_NUM; i++) {
+        mqttClientList[i] = createClient(MQTT_SERVER_ADDRESS, MQTT_CLIENT_ID);
+        mqttClientList[i] = setCallbacks(mqttClientList[i], connlost, messageArrived, NULL);
+        mqttClientList[i] = connectMqttServer(mqttClientList[i], conn_opts);
+        printf("> O Number of %d mqtt client initialized.\n", i);
+    }
     printf("> O Mqtt service was started.\n\n");
 }
 
@@ -270,7 +275,7 @@ void closeSerialport()
 {
     printf("> O Closing serial port.\n");
     int i = 0;
-    for (i = 0; i < UART_NUM; i++) {
+    for (i = 0; i < DEVICE_NUM; i++) {
         close(uartFdPool[i]);
         printf("> O Number of %d serial port was closed.\n", i);
     }
@@ -288,6 +293,10 @@ void stopMysqlService()
 void stopMqttService()
 {
     printf("> O Stoping mqtt service.\n");
-    MQTTAsync_destroy(&mqttClient);
+    int i =0;
+    for (i = 0; i < DEVICE_NUM; i++) {
+        MQTTAsync_destroy(&mqttClientList[i]);
+        printf("> O Number of %d mqtt client destroy finished.\n", i);
+    }
     printf("> O Finished.\n\n");
 }
