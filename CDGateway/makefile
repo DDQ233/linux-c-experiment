@@ -33,6 +33,7 @@ LIB += -lmysqlutil
 LIB += -lmysqlclient
 LIB += -lmqttutil
 LIB += -lpaho-mqtt3a
+LIB += -lcjson
 
 
 $(DESC) : 
