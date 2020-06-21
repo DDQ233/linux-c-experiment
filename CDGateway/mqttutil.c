@@ -24,6 +24,8 @@ MQTTAsync_connectOptions bindConnectOptions(
     conn_opts.onSuccess = onSuccess;
     conn_opts.onFailure = onFailure;
 
+    printf("> O Bind connect options successfully.\n");
+
     return conn_opts;
 }
 
@@ -37,6 +39,8 @@ MQTTAsync_responseOptions bindResponseOptions(
     resp_opts.onSuccess = onSuccess;
     resp_opts.onFailure = onFailure;
 
+    printf("> O Bind response options successfully.\n");
+
     return resp_opts;
 }
 
@@ -49,6 +53,8 @@ MQTTAsync_disconnectOptions bindDisconnectOptions(
 
     disc_opts.onSuccess = onSuccess;
     disc_opts.onFailure = onFailure;
+
+    printf("> O Bind disconnect options successfully.\n");
 
     return disc_opts;
 }

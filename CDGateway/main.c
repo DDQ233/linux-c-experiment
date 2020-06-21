@@ -53,11 +53,86 @@ static unsigned int isMqttConnect = 0;
 static unsigned int isAllSerialportConnect = 0;
 static int uartFdPool[UART_NUM];
 static pthread_t serialportThreadPool[UART_NUM];
+static MYSQL mysqlClient;
+static MYSQL_RES *pRes;
+static MQTTAsync mqttClient;
 // static char* pSerialport;
 // static char serialportList[UART_NUM][15];
 // static char* serialport[UART_NUM];
 // static MYSQL mysqlClient;
 // static MQTTAsync mqttclient;
+
+
+void connlost(void *context, char *cause)
+{
+
+}
+
+int messageArrived(void* context, char* topicName, int topicLen, MQTTAsync_message* m)
+{
+
+}
+
+void onConnectFailure(void* context, MQTTAsync_failureData* response)
+{
+
+}
+
+void onConnect(void* context, MQTTAsync_successData* response)
+{
+
+}
+
+void onDisconnectFailure(void* context, MQTTAsync_failureData* response)
+{
+
+}
+
+void onDisconnect(void* context, MQTTAsync_successData* response)
+{
+
+}
+
+void onSendFailure(void* context, MQTTAsync_failureData* response)
+{
+
+}
+
+void onSend(void* context, MQTTAsync_successData* response)
+{
+
+}
+
+
+
+int main()
+{
+    void *serialportThread(void *arg);
+    void initSerialportList();
+    void startSerialportThread();
+    void closeSerialport();
+    void closeSerialportThread();
+    void startMySqlService();
+    void stopMysqlService();
+    void startMqttService();
+    void stopMqttService();
+
+    // openSerialportList();
+    initSerialportList();
+    startMySqlService();
+    startMqttService();
+
+    startSerialportThread();
+
+    sleep(TWO_SECOND);
+
+    closeSerialportThread();
+    closeSerialport();
+    stopMysqlService();
+    stopMqttService();
+
+    return 0;
+}
 
 
 void *serialportThread(void *arg)
@@ -92,10 +167,9 @@ void *serialportThread(void *arg)
 //         printf("> O Open : %s.\n", temp);
 //         printf("> O Number of %d serial port was initialized.\n", i);
 //     }
-//     printf("> O Successfully.\n\n");
+//     printf("> O Finished.\n\n");
 // }
 
-// Second run
 void initSerialportList()
 {
     int i = 0;
@@ -113,15 +187,14 @@ void initSerialportList()
             SERIALPORT_STOPBITS, 
             SERIALPORT_PARITY);
         if (uartFdPool[i] == -1) {
-            printf("> x Failed to open serial port %d.\n", i + i);
+            printf("> x Failed to open serial port %d.\n", i);
         } else {
-            printf("> O Serial port %d was opened.\n", i + 1);
+            printf("> O Serial port %d was opened.\n", i);
         }
     }
-    printf("> O Successfully.\n\n");
+    printf("> O Finished.\n\n");
 }
 
-// Third run
 void startSerialportThread()
 {
     printf("> O Starting serial port thread.\n");
@@ -135,7 +208,7 @@ void startSerialportThread()
             printf("> O Number of %d thread was created.\n", i);
         }
     }
-    printf("> O Successfully.\n\n");
+    printf("> O Finished.\n\n");
 }
 
 void closeSerialportThread()
@@ -157,9 +230,41 @@ void closeSerialportThread()
             printf("> O Number of %d thread was canceled.\n", i);
         }
     }
-    printf("> O Successfully.\n\n");
+    printf("> O Finished.\n\n");
 }
 
+void startMySqlService()
+{
+    printf("> O Starting mysql service.\n");
+    mysqlClient = connectMysql(
+        MYSQL_REMOTE_SERVER_ADDRESS, 
+        MYSQL_REMOTE_SERVER_USERNAME, 
+        MYSQL_REMOTE_SERVER_PASSWORD, 
+        MYSQL_REMOTE_SERVER_DATABASE);
+    printf("> O Mysql service was started.\n\n");
+}
+
+void startMqttService()
+{
+    printf("> O Starting mqtt service.\n");
+    MQTTAsync_connectOptions conn_opts;
+    MQTTAsync_responseOptions resp_opts;
+    MQTTAsync_disconnectOptions disc_opts;
+    conn_opts = bindConnectOptions(
+        MQTT_USERNAME, 
+        MQTT_PASSWORD, 
+        MQTT_KEEP_ALIVE_INTERVAL_TIME, 
+        MQTT_FLAG_CLEAN_SESSION, 
+        MQTT_FLAG_AUTOMATIC_RECONNECT, 
+        onConnect, 
+        onConnectFailure);
+    resp_opts = bindResponseOptions(onSend, onSendFailure);
+    disc_opts = bindDisconnectOptions(onDisconnect, onDisconnectFailure);
+    mqttClient = createClient(MQTT_SERVER_ADDRESS, MQTT_CLIENT_ID);
+    mqttClient = setCallbacks(mqttClient, connlost, messageArrived, NULL);
+    mqttClient = connectMqttServer(mqttClient, conn_opts);
+    printf("> O Mqtt service was started.\n\n");
+}
 
 void closeSerialport()
 {
@@ -169,20 +274,20 @@ void closeSerialport()
         close(uartFdPool[i]);
         printf("> O Number of %d serial port was closed.\n", i);
     }
-    printf("> O Successfully.\n\n");
+    printf("> O Finished.\n\n");
 }
 
-int main()
+void stopMysqlService()
 {
-    // openSerialportList();
-    initSerialportList();
+    printf("> O Stoping mysql service.\n");
+    freeResult(pRes);
+    mysql_close(&mysqlClient);
+    printf("> O Finished.\n\n");
+}
 
-    startSerialportThread();
-
-    sleep(TWO_SECOND);
-
-    closeSerialportThread();
-    closeSerialport();
-
-    return 0;
+void stopMqttService()
+{
+    printf("> O Stoping mqtt service.\n");
+    MQTTAsync_destroy(&mqttClient);
+    printf("> O Finished.\n\n");
 }

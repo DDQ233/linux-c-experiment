@@ -35,7 +35,7 @@ MYSQL_RES* query(MYSQL com_mysql, char *sql)
 void freeResult(MYSQL_RES *pRes)
 {
     mysql_free_result(pRes);
-    printf("> Free result.\n");
+    printf("> O Free result.\n");
 }
 
 /*
