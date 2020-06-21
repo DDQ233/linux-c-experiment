@@ -130,23 +130,29 @@ int main()
     startMqttService();
     startSerialportThread();
 
-    sleep(TWO_SECOND);
+    sleep(ONE_SECOND);
 
-    int i = 0;
-    int ret;
-    for (i = 0; i < DEVICE_NUM; i++) {
-        ret = pthread_join(serialportThreadPool[i], NULL);
-        if (ret < 0) {
-            printf("> x Failed to join number of %d pthread.\n", i);
-        } else {
-            printf("> O Number of %d thread was joined.\n", i);
-        }
-    }
+    // int i = 0;
+    // int ret;
+    // for (i = 0; i < DEVICE_NUM; i++) {
+    //     ret = pthread_join(serialportThreadPool[i], NULL);
+    //     if (ret < 0) {
+    //         printf("> x Failed to join number of %d pthread.\n", i);
+    //     } else {
+    //         printf("> O Number of %d thread was joined.\n", i);
+    //     }
+    // }
+
+    printf("> O Application running........\n");
 
     // closeSerialportThread();
     // closeSerialport();
     // stopMysqlService();
     // stopMqttService();
+
+    while(1) {
+
+    }
 
     return 0;
 }
@@ -159,24 +165,30 @@ void initDeviceStatus()
         deviceStatus[i] = 0;
     }
     printf("> O Finished.\n\n");
+    sleep(HALF_SECOND);
 }
 
 
 void *serialportThread(void *arg)
 {
+    // Variables
     char receiveBuffer[128];
     int deviceNum = *((int*)arg);
     int count = 0;
     int ret;
+    int fd = uartFdPool[deviceNum];
     cJSON *json, *json_value;
+    MQTTAsync client = mqttClientList[deviceNum];
     MQTTAsync_message message = MQTTAsync_message_initializer;
     MQTTAsync_responseOptions opts = MQTTAsync_responseOptions_initializer;
     opts.onSuccess = onSend;
 	opts.onFailure = onSendFailure;
-	opts.context = mqttClientList[deviceNum];
+	opts.context = client;
     printf("> O Thread %d running.\n", deviceNum);
+    // Run
     while(1) {
-        count = read(uartFdPool[deviceNum], receiveBuffer, 128);
+        printf("> O Wait for data.......\n");
+        count = read(fd, receiveBuffer, 128);
         if (count > 0) {
             printf("UART %d > %s", deviceNum, receiveBuffer);
             // Send message to mqtt server
@@ -192,7 +204,7 @@ void *serialportThread(void *arg)
                 printf("> Topic -----> %s", sensorMqttTopic[deviceNum]);
             }
             // Can topic make it static and save in memory ? 
-            if ((ret = MQTTAsync_sendMessage(mqttClientList[deviceNum], sensorMqttTopic[deviceNum], &message, &opts)) != MQTTASYNC_SUCCESS) {
+            if ((ret = MQTTAsync_sendMessage(client, sensorMqttTopic[deviceNum], &message, &opts)) != MQTTASYNC_SUCCESS) {
                 printf("> x Failed to send message. Error code : %d\n", ret);
             } else {
                 printf("> Send -----> %s.\n", receiveBuffer);
@@ -241,6 +253,7 @@ void initSerialportList()
         }
     }
     printf("> O Finished.\n\n");
+    sleep(HALF_SECOND);
 }
 
 void startSerialportThread()
@@ -258,6 +271,7 @@ void startSerialportThread()
         sleep(HALF_SECOND);
     }
     printf("> O Finished.\n\n");
+    sleep(HALF_SECOND);
 }
 
 void closeSerialportThread()
@@ -272,6 +286,7 @@ void closeSerialportThread()
         printf("> O Number of %d thread was canceled.\n", i);
     }
     printf("> O Finished.\n\n");
+    sleep(HALF_SECOND);
 }
 
 void startMySqlService()
@@ -283,6 +298,7 @@ void startMySqlService()
         MYSQL_REMOTE_SERVER_PASSWORD, 
         MYSQL_REMOTE_SERVER_DATABASE);
     printf("> O Mysql service was started.\n\n");
+    sleep(HALF_SECOND);
 }
 
 void startMqttService()
@@ -309,6 +325,7 @@ void startMqttService()
         printf("> O Number of %d mqtt client initialized.\n", i);
     }
     printf("> O Mqtt service was started.\n\n");
+    sleep(HALF_SECOND);
 }
 
 void closeSerialport()
@@ -320,6 +337,7 @@ void closeSerialport()
         printf("> O Number of %d serial port was closed.\n", i);
     }
     printf("> O Finished.\n\n");
+    sleep(HALF_SECOND);
 }
 
 void stopMysqlService()
@@ -328,6 +346,7 @@ void stopMysqlService()
     freeResult(pRes);
     mysql_close(&mysqlClient);
     printf("> O Finished.\n\n");
+    sleep(HALF_SECOND);
 }
 
 void stopMqttService()
@@ -343,4 +362,5 @@ void stopMqttService()
         printf("> O Number of %d mqtt client destroy finished.\n", i);
     }
     printf("> O Finished.\n\n");
+    sleep(HALF_SECOND);
 }

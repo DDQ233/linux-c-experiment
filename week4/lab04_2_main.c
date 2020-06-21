@@ -11,7 +11,7 @@ void *thread_sum(void *arg)
 {
 	while(1){
 		if(flag!=0){
-			printf("Sum : %d\n\n", x + y11 0);
+			printf("Sum : %d\n\n", x + y);
 			sleep(0.3);
 			flag = 0;
 		}
