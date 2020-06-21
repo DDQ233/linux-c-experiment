@@ -13,7 +13,7 @@ int UartOpen(char* srialPort)
 		perror("> x Cannot open serial port.\n");
 		return -1;
 	}
-	printf("> O Open serial port.");
+	printf("> O Open '%s' serial port.\n");
 
 	// Reset the way of opening to dev file
     if (fcntl(fd, F_SETFL, 0) < 0) {

@@ -16,7 +16,7 @@ SERIALPORT_LIB += -lpthread
 # Project lib
 LIB += -L.
 LIB += -lserialportutil
-
+LIB += -lpthread
 
 
 $(DESC) : 
@@ -25,4 +25,4 @@ $(DESC) :
 	$(CC) $(PROJECT_SRC) -o $(PROJECT_OBJ) $(LIB)
 
 clean:
-	rm -f *.a *.o $(DEST) *~
+	rm -f *.a *.o $(DESC) *~

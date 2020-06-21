@@ -53,7 +53,8 @@ static unsigned int isMqttConnect = 0;
 static unsigned int isAllSerialportConnect = 0;
 static int uartFdPool[UART_NUM];
 static pthread_t serialportThreadPool[UART_NUM];
-static char* serialportList[UART_NUM];
+// static char* pSerialport;
+// static char serialportList[UART_NUM][15];
 // static char* serialport[UART_NUM];
 // static MYSQL mysqlClient;
 // static MQTTAsync mqttclient;
@@ -62,7 +63,8 @@ static char* serialportList[UART_NUM];
 void *serialportThread(void *arg)
 {
     char receiveBuffer[128];
-    int uartNum = (int)arg;
+    // int uartNum = *((int*)arg);
+    int uartNum = *((int*)arg);
     int count = 0;
     while(1) {
         count = read(uartFdPool[uartNum], receiveBuffer, 128);
@@ -79,27 +81,30 @@ void *serialportThread(void *arg)
 }
 
 // First run
-void openSerialportList()
-{
-    int i = 0;
-    printf("> O Opening serial port list.\n");
-    for (i = 0; i < UART_NUM; i++) {
-        char temp[15];
-        sprintf(temp, "/dev/ttyS%d", i);
-        serialportList[i] = temp;
-        printf("> O Number of %d serial port was initialized.\n", i);
-    }
-    printf("> O Successfully.\n\n");
-}
+// void openSerialportList()
+// {
+//     int i = 0;
+//     printf("> O Opening serial port list.\n");
+//     for (i = 0; i < UART_NUM; i++) {
+//         char temp[15];
+//         sprintf(temp, "/dev/ttyS%d", i);
+//         serialportList[i] = temp;
+//         printf("> O Open : %s.\n", temp);
+//         printf("> O Number of %d serial port was initialized.\n", i);
+//     }
+//     printf("> O Successfully.\n\n");
+// }
 
 // Second run
 void initSerialportList()
 {
-    int i;
+    int i = 0;
     int uartFd;
     printf("> O Initializing serial port list.\n");
     for (i = 0; i < UART_NUM; i++) {
-        uartFdPool[i] = UartOpen(serialportList[uartNum]);
+        char serialport[15];
+        sprintf(serialport, "/dev/ttyS%d", i);
+        uartFdPool[i] = UartOpen(serialport);
         uartFdPool[i] = UartBindOptions(
             uartFdPool[i], 
             SERIALPORT_BAUDRATE, 
@@ -107,6 +112,11 @@ void initSerialportList()
             SERIALPORT_DATABITS, 
             SERIALPORT_STOPBITS, 
             SERIALPORT_PARITY);
+        if (uartFdPool[i] == -1) {
+            printf("> x Failed to open serial port %d.\n", i + i);
+        } else {
+            printf("> O Serial port %d was opened.\n", i + 1);
+        }
     }
     printf("> O Successfully.\n\n");
 }
@@ -118,7 +128,7 @@ void startSerialportThread()
     int i = 0;
     int ret;
     for (i = 0; i < UART_NUM; i++) {
-        uartFdPool[i] = pthread_create(&serialportThreadPool[i], NULL, serialportThread, (void*)i);
+        uartFdPool[i] = pthread_create(&serialportThreadPool[i], NULL, serialportThread, (void*)&i);
         if (uartFdPool[i] < 0) {
             printf("> x Failed to create number of %d pthread.\n", i);
         } else {
@@ -128,17 +138,51 @@ void startSerialportThread()
     printf("> O Successfully.\n\n");
 }
 
+void closeSerialportThread()
+{
+    printf("> O Closing serial port thread.\n");
+    int i = 0;
+    int ret;
+    for (i = 0; i < UART_NUM; i++) {
+        // ret = pthread_join(serialportThreadPool[i], NULL);
+        // if (ret < 0) {
+        //     printf("> x Failed to join number of %d pthread.\n", i);
+        // } else {
+        //     printf("> O Number of %d thread was joined.\n", i);
+        // }
+        ret = pthread_cancel(serialportThreadPool[i]);
+        if (ret < 0) {
+            printf("> x Failed to cancel number of %d pthread.\n", i);
+        } else {
+            printf("> O Number of %d thread was canceled.\n", i);
+        }
+    }
+    printf("> O Successfully.\n\n");
+}
+
+
+void closeSerialport()
+{
+    printf("> O Closing serial port.\n");
+    int i = 0;
+    for (i = 0; i < UART_NUM; i++) {
+        close(uartFdPool[i]);
+        printf("> O Number of %d serial port was closed.\n", i);
+    }
+    printf("> O Successfully.\n\n");
+}
+
 int main()
 {
-    openSerialportList();
+    // openSerialportList();
     initSerialportList();
 
-
-
-
-
-
     startSerialportThread();
+
+    sleep(TWO_SECOND);
+
+    closeSerialportThread();
+    closeSerialport();
 
     return 0;
 }

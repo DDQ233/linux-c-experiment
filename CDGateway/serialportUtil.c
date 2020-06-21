@@ -13,8 +13,6 @@ int UartOpen(char* srialPort)
 		perror("> x Cannot open serial port.\n");
 		return -1;
 	}
-	printf("> O Open serial port.");
-
 	// Reset the way of opening to dev file
     if (fcntl(fd, F_SETFL, 0) < 0) {
 		perror("> x Failed to fcntl.\n");
@@ -147,7 +145,7 @@ int UartBindOptions(
 
 	// Activate uart settings
 	if (tcsetattr(fd, TCSANOW, &uart_cfg) != 0) {
-		perror("> x Failed to activate uart settings.\n");
+		perror("> x Failed to activate uart settings.");
 		return -1;
 	}
 	printf("> O Activate uart settings.\n");
