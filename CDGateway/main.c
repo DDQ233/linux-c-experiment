@@ -46,7 +46,7 @@
 #define TWO_SECOND 2
 #define FIVE_SECOND 5
 
-#define DEVICE_NUM 4
+#define DEVICE_NUM 2
 // #define UART_FD_PREFIX "/dev/ttyS"
 
 static unsigned int isMysqlConnect = 0;
@@ -119,12 +119,12 @@ void onDisconnect(void* context, MQTTAsync_successData* response)
 
 void onSendFailure(void* context, MQTTAsync_failureData* response)
 {
-    printf("> x Failed to send message.\n");
+    // printf("> x Failed to send message.\n");
 }
 
 void onSend(void* context, MQTTAsync_successData* response)
 {
-    printf("> O Send message successfully.\n");
+    // printf("> O Send message successfully.\n");
 }
 
 
@@ -170,7 +170,7 @@ int main()
     // stopMqttService();
 
     while(1) {
-        sleep(FIVE_SECOND);
+        sleep(ONE_SECOND);
     }
 
     return 0;
@@ -207,44 +207,56 @@ void *serialportThread(void *arg)
 	opts.context = client;
     printf("> O Thread %d running.\n", deviceNum);
 
+    // sprintf(receiveBuffer, "{\"uid\":\"123\",\"data\":\"123\"}");
+
     // Run
     while(1) {
         // printf("> O Wait for data.......\n");
         count = read(uartFdPool[deviceNum], receiveBuffer, 128);
         if (count > 0) {
-            printf("> UART %d -----> %s.\n", deviceNum, receiveBuffer);
+            // printf("> UART %d -----> %s.\n", deviceNum, receiveBuffer);
             // Send message to mqtt server
             message.payload = receiveBuffer;
             message.payloadlen = (int)strlen(receiveBuffer);
             message.qos = MQTT_MESSAGE_QOS;
-            // Device auth ? Device Status ?
+            // Json data analysis
             json = cJSON_Parse(receiveBuffer);
             json_value = cJSON_GetObjectItem(json, "uid");
-            printf("> JSON Value -----> %s.\n", json_value->valuestring);
+            // printf("> JSON Value -----> %s.\n", json_value->valuestring);
+            
+            // Dynamic binding topic
             if (strlen(sensorMqttTopic[deviceNum]) == 0) {
                 sprintf(sensorMqttTopic[deviceNum], MQTT_SENSOR_TOPIC_PERFIX);
                 strcat(sensorMqttTopic[deviceNum], json_value->valuestring);
                 for (j = 0; j < strlen(sensorMqttTopic[deviceNum]); j++) {
                     topic[j] = sensorMqttTopic[deviceNum][j];
                 }
-                printf("> Bind topic -----> %s.\n", topic);
+                // printf("> Bind topic -----> %s.\n", topic);
             } else if (strlen(sensorMqttTopic[deviceNum]) != 0) {
-                printf("> Topic -----> %s.\n", sensorMqttTopic[deviceNum]);
+                // printf("> Topic -----> %s.\n", sensorMqttTopic[deviceNum]);
             } else {
                 printf("> x Failed to bind topic.\n");
             }
-            // Can topic make it static and save in memory ? 
-            if ((ret = MQTTAsync_sendMessage(client, topic, &message, &opts)) != MQTTASYNC_SUCCESS) {
-                printf("> x Failed to send message. Error code : %d\n", ret);
+            // Message binding
+            message.payload = receiveBuffer;
+            message.payloadlen = (int)strlen(receiveBuffer);
+            message.qos = MQTT_MESSAGE_QOS;
+            if ((ret = MQTTAsync_sendMessage(client, "/sensor/123", &message, &opts)) != MQTTASYNC_SUCCESS) {
+                // printf("> x Failed to send message. Error code : %d\n", ret);
             } else {
-                printf("> Send -----> %s.\n", receiveBuffer);
+                // printf("> Send -----> %s.\n", receiveBuffer);
             }
+
+            // Clear receiver buffer
             memset(receiveBuffer, 0, sizeof(receiveBuffer));
-            count = 0; 
+            count = 0;
+
+            // sleep(ONE_SECOND);
         }
-        sleep(HALF_SECOND);
     }
 }
+
+        // sleep(HALF_SECOND);
 
 // First run
 // void openSerialportList()

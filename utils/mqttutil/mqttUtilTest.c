@@ -106,7 +106,7 @@ int main()
         } else {
             printf("> Send successfully.\n");
         }
-        sleep(2);
+        sleep(0.5);
     }
 
     MQTTAsync_destroy(&mqttClient);
