@@ -46,7 +46,7 @@
 #define TWO_SECOND 2
 #define FIVE_SECOND 5
 
-#define DEVICE_NUM 5
+#define DEVICE_NUM 4
 // #define UART_FD_PREFIX "/dev/ttyS"
 
 static unsigned int isMysqlConnect = 0;
@@ -130,8 +130,6 @@ int main()
     startMqttService();
     startSerialportThread();
 
-    sleep(ONE_SECOND);
-
     // int i = 0;
     // int ret;
     // for (i = 0; i < DEVICE_NUM; i++) {
@@ -143,7 +141,7 @@ int main()
     //     }
     // }
 
-    printf("> O Application running........\n");
+    printf("> O Application running........\n\n");
 
     // closeSerialportThread();
     // closeSerialport();
@@ -151,7 +149,7 @@ int main()
     // stopMqttService();
 
     while(1) {
-
+        sleep(FIVE_SECOND);
     }
 
     return 0;
@@ -187,10 +185,10 @@ void *serialportThread(void *arg)
     printf("> O Thread %d running.\n", deviceNum);
     // Run
     while(1) {
-        printf("> O Wait for data.......\n");
-        count = read(fd, receiveBuffer, 128);
+        // printf("> O Wait for data.......\n");
+        count = read(uartFdPool[deviceNum], receiveBuffer, 128);
         if (count > 0) {
-            printf("UART %d > %s", deviceNum, receiveBuffer);
+            printf("> UART %d -----> %s.\n", deviceNum, receiveBuffer);
             // Send message to mqtt server
             message.payload = receiveBuffer;
             message.payloadlen = (int)strlen(receiveBuffer);
@@ -198,10 +196,15 @@ void *serialportThread(void *arg)
             // Device auth ? Device Status ?
             json = cJSON_Parse(receiveBuffer);
             json_value = cJSON_GetObjectItem(json, "uid");
-            if (sensorMqttTopic[deviceNum] == NULL) {
+            printf("> JSON Value -----> %s.\n", json_value->valuestring);
+            if (strlen(sensorMqttTopic[deviceNum]) == 0) {
                 sprintf(sensorMqttTopic[deviceNum], MQTT_SENSOR_TOPIC_PERFIX);
                 strcat(sensorMqttTopic[deviceNum], json_value->valuestring);
-                printf("> Topic -----> %s", sensorMqttTopic[deviceNum]);
+                printf("> Bind topic -----> %s.\n", sensorMqttTopic[deviceNum]);
+            } else if (strlen(sensorMqttTopic[deviceNum]) != 0) {
+                printf("> Topic -----> %s.\n", sensorMqttTopic[deviceNum]);
+            } else {
+                printf("> x Failed to bind topic.\n");
             }
             // Can topic make it static and save in memory ? 
             if ((ret = MQTTAsync_sendMessage(client, sensorMqttTopic[deviceNum], &message, &opts)) != MQTTASYNC_SUCCESS) {
@@ -212,6 +215,7 @@ void *serialportThread(void *arg)
             memset(receiveBuffer, 0, sizeof(receiveBuffer));
             count = 0; 
         }
+        sleep(HALF_SECOND);
     }
 }
 
@@ -259,19 +263,18 @@ void initSerialportList()
 void startSerialportThread()
 {
     printf("> O Starting serial port thread.\n");
-    int i = 0;
+    int j = 0;
     int ret;
-    for (i = 0; i < DEVICE_NUM; i++) {
-        uartFdPool[i] = pthread_create(&serialportThreadPool[i], NULL, serialportThread, (void*)&i);
-        if (uartFdPool[i] < 0) {
-            printf("> x Failed to create number of %d pthread.\n", i);
+    for (j = 0; j < DEVICE_NUM; j++) {
+        ret = pthread_create(&serialportThreadPool[j], NULL, serialportThread, (void*)&j);
+        if (ret < 0) {
+            printf("> x Failed to create number of %d pthread.\n", j);
         } else {
-            printf("> O Number of %d thread was created.\n", i);
+            printf("> O Number of %d thread was created.\n\n", j);
         }
-        sleep(HALF_SECOND);
+        sleep(ONE_SECOND);
     }
     printf("> O Finished.\n\n");
-    sleep(HALF_SECOND);
 }
 
 void closeSerialportThread()
@@ -322,7 +325,8 @@ void startMqttService()
         mqttClientList[i] = createClient(MQTT_SERVER_ADDRESS, MQTT_CLIENT_ID);
         mqttClientList[i] = setCallbacks(mqttClientList[i], connlost, messageArrived, NULL);
         mqttClientList[i] = connectMqttServer(mqttClientList[i], conn_opts);
-        printf("> O Number of %d mqtt client initialized.\n", i);
+        printf("> O Number of %d mqtt client initialized.\n\n", i);
+        sleep(ONE_SECOND);
     }
     printf("> O Mqtt service was started.\n\n");
     sleep(HALF_SECOND);

@@ -25,4 +25,4 @@ $(DESC) :
 	$(CC) $(PROJECT_SRC) -o $(PROJECT_OBJ) $(LIB)
 
 clean:
-	rm -f *.a *.o $(DEST) *~
+	rm -f *.a *.o $(DESC) *~

@@ -102,6 +102,7 @@ int main()
         printf("> Sending message.......\n");
         if ((ret = MQTTAsync_sendMessage(mqttClient, "/sensor/dht11", &message, NULL)) != MQTTASYNC_SUCCESS) {
             printf("> x Parameters error.\n");
+            printf("> x Error code : %d.\n\n", ret);
         } else {
             printf("> Send successfully.\n");
         }
