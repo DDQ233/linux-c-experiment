@@ -68,6 +68,7 @@ static MQTTAsync mqttClientList[DEVICE_NUM];
 
 void connlost(void *context, char *cause)
 {
+    /*
     MQTTAsync client = (MQTTAsync)context;
 	MQTTAsync_connectOptions conn_opts = MQTTAsync_connectOptions_initializer;
     int ret;
@@ -83,41 +84,47 @@ void connlost(void *context, char *cause)
     } else {
         printf("> O Reconnect finished.\n\n");
     }
+    */
 }
 
-int messageArrived(void* context, char* topicName, int topicLen, MQTTAsync_message* m)
+int messageArrived(void* context, char* topicName, int topicLen, MQTTAsync_message* message)
 {
-
+    printf("> Message arrived.\n");
+    printf("> Topic : %s.\n", topicName);
+    printf("> Message : %s.\n", (char*)message->payload);
+    MQTTAsync_freeMessage(&message);
+    MQTTAsync_free(topicName);
+    return 1;
 }
 
 void onConnectFailure(void* context, MQTTAsync_failureData* response)
 {
-
+    printf("> x Failed to connect mqtt server.\n");
 }
 
 void onConnect(void* context, MQTTAsync_successData* response)
 {
-
+    printf("> O Connect mqtt server successfully.\n");
 }
 
 void onDisconnectFailure(void* context, MQTTAsync_failureData* response)
 {
-
+    printf("> x Failed to disconnect mqtt server.\n");
 }
 
 void onDisconnect(void* context, MQTTAsync_successData* response)
 {
-
+    printf("> O Disconnect mqtt server successfully.\n");
 }
 
 void onSendFailure(void* context, MQTTAsync_failureData* response)
 {
-
+    printf("> x Failed to send message.\n");
 }
 
 void onSend(void* context, MQTTAsync_successData* response)
 {
-
+    printf("> O Send message successfully.\n");
 }
 
 
@@ -185,11 +192,13 @@ void *serialportThread(void *arg)
 {
     // Variables
     char receiveBuffer[128];
+    int j = 0;
     int deviceNum = *((int*)arg);
     int count = 0;
     int ret;
     int fd = uartFdPool[deviceNum];
     cJSON *json, *json_value;
+    char topic[20];
     MQTTAsync client = mqttClientList[deviceNum];
     MQTTAsync_message message = MQTTAsync_message_initializer;
     MQTTAsync_responseOptions opts = MQTTAsync_responseOptions_initializer;
@@ -197,6 +206,7 @@ void *serialportThread(void *arg)
 	opts.onFailure = onSendFailure;
 	opts.context = client;
     printf("> O Thread %d running.\n", deviceNum);
+
     // Run
     while(1) {
         // printf("> O Wait for data.......\n");
@@ -214,14 +224,17 @@ void *serialportThread(void *arg)
             if (strlen(sensorMqttTopic[deviceNum]) == 0) {
                 sprintf(sensorMqttTopic[deviceNum], MQTT_SENSOR_TOPIC_PERFIX);
                 strcat(sensorMqttTopic[deviceNum], json_value->valuestring);
-                printf("> Bind topic -----> %s.\n", sensorMqttTopic[deviceNum]);
+                for (j = 0; j < strlen(sensorMqttTopic[deviceNum]); j++) {
+                    topic[j] = sensorMqttTopic[deviceNum][j];
+                }
+                printf("> Bind topic -----> %s.\n", topic);
             } else if (strlen(sensorMqttTopic[deviceNum]) != 0) {
                 printf("> Topic -----> %s.\n", sensorMqttTopic[deviceNum]);
             } else {
                 printf("> x Failed to bind topic.\n");
             }
             // Can topic make it static and save in memory ? 
-            if ((ret = MQTTAsync_sendMessage(client, sensorMqttTopic[deviceNum], &message, &opts)) != MQTTASYNC_SUCCESS) {
+            if ((ret = MQTTAsync_sendMessage(client, topic, &message, &opts)) != MQTTASYNC_SUCCESS) {
                 printf("> x Failed to send message. Error code : %d\n", ret);
             } else {
                 printf("> Send -----> %s.\n", receiveBuffer);
