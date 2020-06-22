@@ -31,7 +31,7 @@
 #define MQTT_TIMEOUT 10000L
 #define MQTT_SENSOR_TOPIC_PERFIX "/sensor/"
 #define MQTT_CONTORL_TOPIC_PERFIX "/ctrl/"
-#define MQTT_KEEP_ALIVE_INTERVAL_TIME 20
+#define MQTT_KEEP_ALIVE_INTERVAL_TIME 30
 #define MQTT_FLAG_CLEAN_SESSION 0
 #define MQTT_FLAG_AUTOMATIC_RECONNECT 1
 
@@ -68,7 +68,21 @@ static MQTTAsync mqttClientList[DEVICE_NUM];
 
 void connlost(void *context, char *cause)
 {
+    MQTTAsync client = (MQTTAsync)context;
+	MQTTAsync_connectOptions conn_opts = MQTTAsync_connectOptions_initializer;
+    int ret;
 
+    printf("\n> x Connection lost.\n");
+    printf("> x Cause : %s.\n", cause);
+    printf("> O Reconnecting..........\n");
+    conn_opts.keepAliveInterval = MQTT_KEEP_ALIVE_INTERVAL_TIME;
+    conn_opts.cleansession = MQTT_FLAG_CLEAN_SESSION;
+	if ((ret = MQTTAsync_connect(client, &conn_opts)) != MQTTASYNC_SUCCESS) {
+        printf("> x Failed to reconnect mqtt server.");
+        printf("> x Error code : %d", ret);
+    } else {
+        printf("> O Reconnect finished.\n\n");
+    }
 }
 
 int messageArrived(void* context, char* topicName, int topicLen, MQTTAsync_message* m)
@@ -322,6 +336,7 @@ void startMqttService()
     resp_opts = bindResponseOptions(onSend, onSendFailure);
     disc_opts = bindDisconnectOptions(onDisconnect, onDisconnectFailure);
     for (i = 0; i < DEVICE_NUM; i++) {
+        conn_opts.context = mqttClientList[i];
         mqttClientList[i] = createClient(MQTT_SERVER_ADDRESS, MQTT_CLIENT_ID);
         mqttClientList[i] = setCallbacks(mqttClientList[i], connlost, messageArrived, NULL);
         mqttClientList[i] = connectMqttServer(mqttClientList[i], conn_opts);
