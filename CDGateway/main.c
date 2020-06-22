@@ -124,7 +124,7 @@ void onSendFailure(void* context, MQTTAsync_failureData* response)
 
 void onSend(void* context, MQTTAsync_successData* response)
 {
-    // printf("> O Send message successfully.\n");
+    printf("> O Send message successfully.\n");
 }
 
 
@@ -207,14 +207,15 @@ void *serialportThread(void *arg)
 	opts.context = client;
     printf("> O Thread %d running.\n", deviceNum);
 
-    // sprintf(receiveBuffer, "{\"uid\":\"123\",\"data\":\"123\"}");
+    sprintf(receiveBuffer, "{\"uid\":\"123\",\"data\":\"123\"}");
+    printf("> Buffer : %s.\n\n", receiveBuffer);
 
     // Run
     while(1) {
         // printf("> O Wait for data.......\n");
-        count = read(uartFdPool[deviceNum], receiveBuffer, 128);
+        // count = read(uartFdPool[deviceNum], receiveBuffer, 128);
+        /*
         if (count > 0) {
-            // printf("> UART %d -----> %s.\n", deviceNum, receiveBuffer);
             // Send message to mqtt server
             message.payload = receiveBuffer;
             message.payloadlen = (int)strlen(receiveBuffer);
@@ -222,8 +223,9 @@ void *serialportThread(void *arg)
             // Json data analysis
             json = cJSON_Parse(receiveBuffer);
             json_value = cJSON_GetObjectItem(json, "uid");
+            */
             // printf("> JSON Value -----> %s.\n", json_value->valuestring);
-            
+            /*
             // Dynamic binding topic
             if (strlen(sensorMqttTopic[deviceNum]) == 0) {
                 sprintf(sensorMqttTopic[deviceNum], MQTT_SENSOR_TOPIC_PERFIX);
@@ -237,6 +239,7 @@ void *serialportThread(void *arg)
             } else {
                 printf("> x Failed to bind topic.\n");
             }
+            */
             // Message binding
             message.payload = receiveBuffer;
             message.payloadlen = (int)strlen(receiveBuffer);
@@ -246,13 +249,13 @@ void *serialportThread(void *arg)
             } else {
                 // printf("> Send -----> %s.\n", receiveBuffer);
             }
-
+            
             // Clear receiver buffer
-            memset(receiveBuffer, 0, sizeof(receiveBuffer));
+            // memset(receiveBuffer, 0, sizeof(receiveBuffer));
             count = 0;
 
-            // sleep(ONE_SECOND);
-        }
+            sleep(TWO_SECOND);
+        // }
     }
 }
 
