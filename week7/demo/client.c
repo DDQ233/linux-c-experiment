@@ -17,7 +17,7 @@ int main(int argc,char **argv)
 	int sock_size=sizeof(struct sockaddr_in);
 	if(argc<2)
 	{
-		printf("Usage:./client serverip\n");
+		printf("> Usage:./client serverip\n");
 		return 0;
 	}
 	bzero(&server_addr,sock_size);
@@ -28,10 +28,10 @@ int main(int argc,char **argv)
 	ret=connect(client_fd,(struct sockaddr*)&server_addr,sock_size);
 	if(ret<0)
 	{
-		perror("Failed to connect:");
+		perror("> x Failed to connect : ");
 		return -1;
 	}
-	printf("Connect successfully!\n");
+	printf("> O Connect successfully!\n");
 	while(1)
 	{
 		fgets(buf,512,stdin);
@@ -44,7 +44,7 @@ int main(int argc,char **argv)
 		if(count>0)
 		{
 			recv_buf[count]=0;
-			printf("Echo:%s\n",recv_buf);
+			printf("\nEcho ---> %s\n",recv_buf);
 		}	
 		else
 		{

@@ -4,6 +4,7 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <netinet/in.h>
+#include <string.h>
 #include <strings.h>
 #define MAXCONN 8
 int main()
@@ -27,18 +28,18 @@ int main()
 	ret=bind(listen_fd,(struct sockaddr*)&server_addr,sock_size);
 	if(ret==0)
 	{
-		printf("Bind Successfully!\n");
+		printf("> O Bind Successfully!\n");
 	}
 	ret=listen(listen_fd,MAXCONN);
 	if(ret==0)
 	{
-		printf("Listen Successfully!\n");
+		printf("> O Listen Successfully!\n");
 	}
 	while((comm_fd=accept(listen_fd,(struct sockaddr*)&client_addr,&sock_size))>=0)
 	{
 		char ipaddr[16];
 		inet_ntop(AF_INET,&client_addr.sin_addr.s_addr,ipaddr,16);
-		printf("A connection come on:%s\n",ipaddr);
+		printf("> O A connection come on ---> %s\n",ipaddr);
 		while(1)
 		{
 			char buff[512];
@@ -47,17 +48,17 @@ int main()
 			if(count>0)
 			{
 				buff[count]=0;
-				printf("A String from %s:%s\n",ipaddr,buff);
+				printf("\nFrom %s ---> %s\n",ipaddr,buff);
 				if(strncmp(buff,"quit",4)==0)
 				{
-					printf("A talking is over!\n");
+					printf("> O A talking is over!\n");
 					break;
 				}
 				write(comm_fd,buff,count);
 			}
 			else
 			{
-				printf("A talking is over!\n");
+				printf("\n> x A connection is over!\n\n");
 				break;					
 			}
 		}
