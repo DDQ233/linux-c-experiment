@@ -211,30 +211,35 @@ void *serialportThread(void *arg)
     while(1) {
         count = read(uartFdPool[deviceNum], receiveBuffer, 128);
         if (count > 0) {
-            // Json data analysis
-            json = cJSON_Parse(receiveBuffer);
-            json_value = cJSON_GetObjectItem(json, "uid");
-            // Dynamic binding topic
-            if (strlen(sensorMqttTopic[deviceNum]) == 0) {
-                sprintf(sensorMqttTopic[deviceNum], MQTT_SENSOR_TOPIC_PERFIX);
-                strcat(sensorMqttTopic[deviceNum], json_value->valuestring);
-                for (j = 0; j < strlen(sensorMqttTopic[deviceNum]); j++) {
-                    topic[j] = sensorMqttTopic[deviceNum][j];
-                }
-            } else if (strlen(sensorMqttTopic[deviceNum]) != 0) {
-                // printf("> Topic -----> %s.\n", sensorMqttTopic[deviceNum]);
-            } else {
-                printf("> x Failed to bind topic.\n");
-            }
+            // // Json data analysis
+            // json = cJSON_Parse(receiveBuffer);
+            // json_value = cJSON_GetObjectItem(json, "uid");
+            // // Dynamic binding topic
+            // if (strlen(sensorMqttTopic[deviceNum]) == 0) {
+            //     sprintf(sensorMqttTopic[deviceNum], MQTT_SENSOR_TOPIC_PERFIX);
+            //     strcat(sensorMqttTopic[deviceNum], json_value->valuestring);
+            //     for (j = 0; j < strlen(sensorMqttTopic[deviceNum]); j++) {
+            //         topic[j] = sensorMqttTopic[deviceNum][j];mai
+            //     }
+            // } else if (strlen(sensorMqttTopic[deviceNum]) != 0) {
+            //     // printf("> Topic -----> %s.\n", sensorMqttTopic[deviceNum]);
+            // } else {
+            //     printf("> x Failed to bind topic.\n");
+            // }
             // Message binding
             message.payload = receiveBuffer;
             message.payloadlen = (int)strlen(receiveBuffer);
             message.qos = MQTT_MESSAGE_QOS;
-            if ((ret = MQTTAsync_sendMessage(mqttClientList[deviceNum], topic, &message, &opts)) != MQTTASYNC_SUCCESS) {
-                // printf("> x Failed to send message. Error code : %d\n", ret);
-            } else {
-                // printf("> Send -----> %s.\n", receiveBuffer);
+
+            while((ret = MQTTAsync_sendMessage(mqttClientList[deviceNum], topic, &message, &opts)) != MQTTASYNC_SUCCESS){
+                sleep(HALF_SECOND);
             }
+
+            // if ((ret = MQTTAsync_sendMessage(mqttClientList[deviceNum], topic, &message, &opts)) != MQTTASYNC_SUCCESS) {
+            //     // printf("> x Failed to send message. Error code : %d\n", ret);
+            // } else {
+            //     // printf("> Send -----> %s.\n", receiveBuffer);
+            // }
             // Clear receiver buffer
             memset(receiveBuffer, 0, sizeof(receiveBuffer));
             count = 0;
