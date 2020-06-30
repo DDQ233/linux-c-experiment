@@ -108,4 +108,16 @@ MQTTAsync connectMqttServer(MQTTAsync client, MQTTAsync_connectOptions conn_opts
     return mqttClient;
 }
 
-
+// Subscribe topic
+MQTTAsync subscribeTopic(MQTTAsync client, char* topic, int qos)
+{
+    MQTTAsync mqttlient = client;
+    int ret;
+    if ((ret = MQTTAsync_subscribe(mqttlient, topic, qos, NULL)) != MQTTASYNC_SUCCESS) {
+        printf("> x Cannot subscribe topic.\n");
+        printf("> x Error code : %d.\n", ret);
+    } else {
+        printf("> O Subscribe topic successfully.\n");
+    }
+    return mqttlient;
+}

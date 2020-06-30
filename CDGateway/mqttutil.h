@@ -35,7 +35,7 @@ MQTTAsync setCallbacks(
 // Connect mqtt server
 MQTTAsync connectMqttServer(MQTTAsync client, MQTTAsync_connectOptions conn_opts);
 
-
-
+// Subscribe topic
+MQTTAsync subscribeTopic(MQTTAsync client, char* topic, int qos);
 
 #endif

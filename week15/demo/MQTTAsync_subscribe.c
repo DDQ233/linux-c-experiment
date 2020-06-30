@@ -29,9 +29,9 @@
 #include <OsWrapper.h>
 #endif
 
-#define ADDRESS     "tcp://mqtt.eclipse.org:1883"
-#define CLIENTID    "ExampleClientSub"
-#define TOPIC       "MQTT Examples"
+#define ADDRESS     "tcp://111.229.163.109:1990"
+#define CLIENTID    "777"
+#define TOPIC       "/ctrl"
 #define PAYLOAD     "Hello World!"
 #define QOS         1
 #define TIMEOUT     10000L

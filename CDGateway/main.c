@@ -27,15 +27,15 @@
 #define MQTT_CLIENT_ID "Gateway"
 #define MQTT_USERNAME "admin"
 #define MQTT_PASSWORD "admin"
-#define MQTT_MESSAGE_QOS 2
+#define MQTT_MESSAGE_QOS 1
 #define MQTT_TIMEOUT 10000L
 #define MQTT_SENSOR_TOPIC_PERFIX "/sensor/"
-#define MQTT_CONTORL_TOPIC_PERFIX "/ctrl/"
+#define MQTT_CONTORL_TOPIC "/ctrl/"
 #define MQTT_KEEP_ALIVE_INTERVAL_TIME 30
 #define MQTT_FLAG_CLEAN_SESSION 0
 #define MQTT_FLAG_AUTOMATIC_RECONNECT 1
 
-#define SERIALPORT_BAUDRATE 9600
+#define SERIALPORT_BAUDRATE 115200
 #define SERIALPORT_FLOWCTRL 0
 #define SERIALPORT_DATABITS 8
 #define SERIALPORT_STOPBITS 1
@@ -46,17 +46,17 @@
 #define TWO_SECOND 2
 #define FIVE_SECOND 5
 
-#define DEVICE_NUM 3
+#define DEVICE_NUM 2
 // #define UART_FD_PREFIX "/dev/ttyS"
 
-static unsigned int isMysqlConnect = 0;
-static unsigned int isMqttConnect = 0;
-static unsigned int isAllSerialportConnect = 0;
+// static unsigned int isMysqlConnect = 0;
+// static unsigned int isMqttConnect = 0;
+// static unsigned int isAllSerialportConnect = 0;
 static unsigned int deviceStatus[DEVICE_NUM];
 static char sensorMqttTopic[DEVICE_NUM][20];
 static int uartFdPool[DEVICE_NUM];
 static pthread_t serialportThreadPool[DEVICE_NUM];
-static MYSQL mysqlClient;
+static MYSQL mysqlClientPool[DEVICE_NUM];
 static MYSQL_RES *pRes;
 static MQTTAsync mqttClientList[DEVICE_NUM];
 // static char* pSerialport;
@@ -65,6 +65,50 @@ static MQTTAsync mqttClientList[DEVICE_NUM];
 // static MYSQL mysqlClient;
 // static MQTTAsync mqttclient;
 
+void onSubscribe(void* context, MQTTAsync_successData* response)
+{
+	printf("> O Subscribe succeeded\n");
+}
+
+void onSubscribeFailure(void* context, MQTTAsync_failureData* response)
+{
+	printf("> x Subscribe failed, rc %d\n", response->code);
+}
+
+void onConnect(void* context, MQTTAsync_successData* response)
+{
+    printf("> O Connect mqtt server successfully.\n");
+    MQTTAsync client = (MQTTAsync)context;
+    // sleep(HALF_SECOND);
+    client = subscribeTopic(client, MQTT_CONTORL_TOPIC, MQTT_MESSAGE_QOS);
+	MQTTAsync_responseOptions opts = MQTTAsync_responseOptions_initializer;
+    opts.onSuccess = onSubscribe;
+	opts.onFailure = onSubscribeFailure;
+    opts.context = client;
+	int ret;
+    // client = subscribeTopic(client, MQTT_CONTORL_TOPIC, MQTT_MESSAGE_QOS, opts);
+    if ((ret = MQTTAsync_subscribe(client, MQTT_CONTORL_TOPIC, MQTT_MESSAGE_QOS, NULL)) != MQTTASYNC_SUCCESS) {
+        printf("> x Failed to subscribe topic.\n");
+        printf("> x Error code : %d.\n", ret);
+    } else {
+        printf("> O Subscribe topic finished.\n");
+    }
+}
+
+void onDisconnect(void* context, MQTTAsync_successData* response)
+{
+    printf("> O Disconnect mqtt server successfully.\n");
+}
+
+int messageArrived(void* context, char* topicName, int topicLen, MQTTAsync_message* message)
+{
+    printf("> Message arrived.\n");
+    printf("> Topic : %s.\n", topicName);
+    printf("> Message : %s.\n", (char*)message->payload);
+    MQTTAsync_freeMessage(&message);
+    MQTTAsync_free(topicName);
+    return 1;
+}
 
 void connlost(void *context, char *cause)
 {
@@ -87,34 +131,14 @@ void connlost(void *context, char *cause)
     */
 }
 
-int messageArrived(void* context, char* topicName, int topicLen, MQTTAsync_message* message)
-{
-    printf("> Message arrived.\n");
-    printf("> Topic : %s.\n", topicName);
-    printf("> Message : %s.\n", (char*)message->payload);
-    MQTTAsync_freeMessage(&message);
-    MQTTAsync_free(topicName);
-    return 1;
-}
-
 void onConnectFailure(void* context, MQTTAsync_failureData* response)
 {
     printf("> x Failed to connect mqtt server.\n");
 }
 
-void onConnect(void* context, MQTTAsync_successData* response)
-{
-    printf("> O Connect mqtt server successfully.\n");
-}
-
 void onDisconnectFailure(void* context, MQTTAsync_failureData* response)
 {
     printf("> x Failed to disconnect mqtt server.\n");
-}
-
-void onDisconnect(void* context, MQTTAsync_successData* response)
-{
-    printf("> O Disconnect mqtt server successfully.\n");
 }
 
 void onSendFailure(void* context, MQTTAsync_failureData* response)
@@ -126,8 +150,6 @@ void onSend(void* context, MQTTAsync_successData* response)
 {
     printf("> O Send message successfully.\n");
 }
-
-
 
 int main()
 {
@@ -145,7 +167,6 @@ int main()
 
     // Function initialization
     initDeviceStatus();
-    // openSerialportList();
     initSerialportList();
     startMySqlService();
     startMqttService();
@@ -170,27 +191,18 @@ int main()
     // stopMqttService();
 
     while(1) {
-        sleep(ONE_SECOND);
+        sleep(TWO_SECOND);
     }
 
     return 0;
 }
 
-void initDeviceStatus()
-{
-    printf("> O Initializing all device status.\n");
-    int i = 0;
-    for (i = 0; i < DEVICE_NUM; i++) {
-        deviceStatus[i] = 0;
-    }
-    printf("> O Finished.\n\n");
-    sleep(HALF_SECOND);
-}
-
-
 void *serialportThread(void *arg)
 {
     // Variables
+    time_t t;
+    struct tm *tm;
+    char timestamp[64];
     char receiveBuffer[128];
     int j = 0;
     int deviceNum = *((int*)arg);
@@ -199,7 +211,10 @@ void *serialportThread(void *arg)
     int fd = uartFdPool[deviceNum];
     cJSON *json, *json_value;
     char topic[20];
+    int flag = -1;
+    char sql[256];
     // MQTTAsync client = mqttClientList[deviceNum];
+    // Subscribe topic
     MQTTAsync_message message = MQTTAsync_message_initializer;
     MQTTAsync_responseOptions opts = MQTTAsync_responseOptions_initializer;
     opts.onSuccess = onSend;
@@ -211,6 +226,7 @@ void *serialportThread(void *arg)
     while(1) {
         count = read(uartFdPool[deviceNum], receiveBuffer, 128);
         if (count > 0) {
+
             // // Json data analysis
             // json = cJSON_Parse(receiveBuffer);
             // json_value = cJSON_GetObjectItem(json, "uid");
@@ -226,20 +242,43 @@ void *serialportThread(void *arg)
             // } else {
             //     printf("> x Failed to bind topic.\n");
             // }
+
+            printf("> Msg ---> %s.\n", receiveBuffer);
+
+            // Get local time for now as timestamp
+            time(&t);
+            tm = localtime(&t);
+            sprintf(
+                timestamp, 
+                "%4d-%02d-%02d %02d:%02d:%02d", 
+                tm->tm_year + 1900,
+                tm->tm_mon + 1,
+                tm->tm_mday,
+                tm->tm_hour,
+                tm->tm_min,
+                tm->tm_sec);
+            sprintf(sql, "INSERT INTO tb_data VALUES('user1', '00000001', '%s', '%s')", receiveBuffer, timestamp);
+            if (mysql_query(&mysqlClientPool[deviceNum], sql) != 0) {
+                printf("> x Excute sql error : %s.\n\n", mysql_error(&mysqlClientPool[deviceNum]));
+            } else {
+                printf("> O Excute sql finished.\n");
+            }
+
             // Message binding
             message.payload = receiveBuffer;
             message.payloadlen = (int)strlen(receiveBuffer);
             message.qos = MQTT_MESSAGE_QOS;
-
-            while((ret = MQTTAsync_sendMessage(mqttClientList[deviceNum], topic, &message, &opts)) != MQTTASYNC_SUCCESS){
+            while((ret = MQTTAsync_sendMessage(mqttClientList[deviceNum], "/sensor/123", &message, &opts)) != MQTTASYNC_SUCCESS){
                 sleep(HALF_SECOND);
             }
-
+            /*
             // if ((ret = MQTTAsync_sendMessage(mqttClientList[deviceNum], topic, &message, &opts)) != MQTTASYNC_SUCCESS) {
             //     // printf("> x Failed to send message. Error code : %d\n", ret);
             // } else {
             //     // printf("> Send -----> %s.\n", receiveBuffer);
             // }
+            */
+            
             // Clear receiver buffer
             memset(receiveBuffer, 0, sizeof(receiveBuffer));
             count = 0;
@@ -247,20 +286,16 @@ void *serialportThread(void *arg)
     }
 }
 
-// First run
-// void openSerialportList()
-// {
-//     int i = 0;
-//     printf("> O Opening serial port list.\n");
-//     for (i = 0; i < DEVICE_NUM; i++) {
-//         char temp[15];
-//         sprintf(temp, "/dev/ttyS%d", i);
-//         serialportList[i] = temp;
-//         printf("> O Open : %s.\n", temp);
-//         printf("> O Number of %d serial port was initialized.\n", i);
-//     }
-//     printf("> O Finished.\n\n");
-// }
+void initDeviceStatus()
+{
+    printf("> O Initializing all device status.\n");
+    int i = 0;
+    for (i = 0; i < DEVICE_NUM; i++) {
+        deviceStatus[i] = 0;
+    }
+    printf("> O Finished.\n\n");
+    sleep(ONE_SECOND);
+}
 
 void initSerialportList()
 {
@@ -285,7 +320,7 @@ void initSerialportList()
         }
     }
     printf("> O Finished.\n\n");
-    sleep(HALF_SECOND);
+    sleep(ONE_SECOND);
 }
 
 void startSerialportThread()
@@ -323,13 +358,17 @@ void closeSerialportThread()
 void startMySqlService()
 {
     printf("> O Starting mysql service.\n");
-    mysqlClient = connectMysql(
-        MYSQL_REMOTE_SERVER_ADDRESS, 
-        MYSQL_REMOTE_SERVER_USERNAME, 
-        MYSQL_REMOTE_SERVER_PASSWORD, 
-        MYSQL_REMOTE_SERVER_DATABASE);
-    printf("> O Mysql service was started.\n\n");
-    sleep(HALF_SECOND);
+    int i = 0;
+    for (i = 0; i < DEVICE_NUM; i++) {
+        mysqlClientPool[i] = connectMysql(
+            MYSQL_REMOTE_SERVER_ADDRESS, 
+            MYSQL_REMOTE_SERVER_USERNAME, 
+            MYSQL_REMOTE_SERVER_PASSWORD, 
+            MYSQL_REMOTE_SERVER_DATABASE);
+        printf("> O Mysql service %d was started.\n", i);
+    }
+    sleep(ONE_SECOND);
+    printf("> O Finished.\n\n");
 }
 
 void startMqttService()
@@ -354,11 +393,12 @@ void startMqttService()
         mqttClientList[i] = createClient(MQTT_SERVER_ADDRESS, MQTT_CLIENT_ID);
         mqttClientList[i] = setCallbacks(mqttClientList[i], connlost, messageArrived, NULL);
         mqttClientList[i] = connectMqttServer(mqttClientList[i], conn_opts);
+        // mqttClientList[i] = subscribeTopic(mqttClientList[i], MQTT_CONTORL_TOPIC, MQTT_MESSAGE_QOS);
         printf("> O Number of %d mqtt client initialized.\n\n", i);
         sleep(ONE_SECOND);
     }
     printf("> O Mqtt service was started.\n\n");
-    sleep(HALF_SECOND);
+    sleep(ONE_SECOND);
 }
 
 void closeSerialport()
@@ -377,7 +417,10 @@ void stopMysqlService()
 {
     printf("> O Stoping mysql service.\n");
     freeResult(pRes);
-    mysql_close(&mysqlClient);
+    int i = 0;
+    for (int i = 0; i < DEVICE_NUM; i++) {
+        mysql_close(&mysqlClientPool[i]);
+    }
     printf("> O Finished.\n\n");
     sleep(HALF_SECOND);
 }
